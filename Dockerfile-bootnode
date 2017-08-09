@@ -1,0 +1,22 @@
+FROM alpine:3.6
+
+ADD . /go-ethereum
+# Uses a pre generated bootkey and genesis file with very low difficulty and pre allocated coins
+RUN \
+  apk add --update git go make gcc musl-dev linux-headers && \
+  cp go-ethereum/private/boot.key ~			  && \
+  cp go-ethereum/private/genesis.json  ~                  && \    
+  (cd go-ethereum && make geth)                           && \
+  (cd go-ethereum && make bootnode)                       && \
+  cp go-ethereum/build/bin/geth /usr/local/bin/           && \
+  cp go-ethereum/build/bin/bootnode /usr/local/bin/       && \
+  apk del git go make gcc musl-dev linux-headers          && \
+  geth init ./go-ethereum/private/genesis.json		  && \
+  rm -rf /go-ethereum && rm -rf /var/cache/apk/*	 
+
+EXPOSE 8545
+EXPOSE 30301
+EXPOSE 30301/udp
+
+# run the bootnode command
+ENTRYPOINT bootnode --nodekey=/root/boot.key
